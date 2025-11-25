@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "public": true,
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/elab_analytics_dashboard.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    }
+  ]
+}

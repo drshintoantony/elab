@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eLAB Analytics Dashboard</title>
+
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- DataTables for sortable tables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+        }
+
+        .date-range {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .kpi-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 8px 0;
+            word-break: break-all;
+        }
+
+        .kpi-value.revenue-value {
+            font-size: 1.4em;
+        }
+
+        .kpi-label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            opacity: 0.9;
+            letter-spacing: 0.5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        table tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab {
+                width: 100%;
+            }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #999;
+            font-size: 1.2em;
+        }
+
+        .export-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+
+        .export-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .filters {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+
+        .filter-group label {
+            margin-right: 10px;
+            font-weight: 600;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 eLAB Analytics Dashboard</h1>
+            <div class="date-range" id="dateRange">Loading...</div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">📊 Dashboard</button>
+            <button class="tab" onclick="showTab('district')">🗺️ Districts</button>
+            <button class="tab" onclick="showTab('employees')">👥 Employees</button>
+            <button class="tab" onclick="showTab('tests')">🧪 Tests</button>
+            <button class="tab" onclick="showTab('species')">🐾 Species</button>
+            <button class="tab" onclick="showTab('monthly')">📅 Monthly</button>
+            <button class="tab" onclick="showTab('yearly')">📆 Yearly</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content active">
+            <div class="filters">
+                <div class="filter-group">
+                    <label>📅 Quick Filter:</label>
+                    <select id="dashboardFilter" onchange="filterDashboard(this.value)">
+                        <option value="all">All Data</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="180">Last 6 Months</option>
+                        <option value="365">Last Year</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <button class="export-btn" onclick="window.location.href='elab_analytics_complete.xlsx'">
+                        📥 Download Full Excel Report
+                    </button>
+                </div>
+            </div>
+
+            <div class="kpi-grid" id="kpiGrid"></div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h2 class="card-title">Top Tests by Volume</h2>
+                    <div class="chart-container">
+                        <canvas id="testsChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">Species Distribution</h2>
+                    <div class="chart-container">
+                        <canvas id="speciesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Employee Performance</h2>
+                <div class="chart-container">
+                    <canvas id="employeeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h2 class="card-title">Top Districts by Revenue</h2>
+                    <div class="chart-container">
+                        <canvas id="districtRevenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">Monthly Revenue Trend</h2>
+                    <div class="chart-container">
+                        <canvas id="dashboardMonthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Test Category Distribution</h2>
+                <div class="chart-container">
+                    <canvas id="testCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- District Tab -->
+        <div id="district-tab" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">District-wise Analysis</h2>
+                <button class="export-btn" onclick="exportTableToExcel('districtTable', 'district_analysis')">
+                    📥 Export to Excel
+                </button>
+                <table id="districtTable" class="display" style="width:100%"></table>
+            </div>
+        </div>
+
+        <!-- Employees Tab -->
+        <div id="employees-tab" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">Employee Case Comparison</h2>
+                <button class="export-btn" onclick="exportTableToExcel('employeeTable', 'employee_comparison')">
+                    📥 Export to Excel
+                </button>
+                <table id="employeeTable" class="display" style="width:100%"></table>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Employee Test Breakdown</h2>
+                <table id="employeeTestTable" class="display" style="width:100%"></table>
+            </div>
+        </div>
+
+        <!-- Tests Tab -->
+        <div id="tests-tab" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">Test Analysis</h2>
+                <button class="export-btn" onclick="exportTableToExcel('testTable', 'test_analysis')">
+                    📥 Export to Excel
+                </button>
+                <table id="testTable" class="display" style="width:100%"></table>
+            </div>
+        </div>
+
+        <!-- Species Tab -->
+        <div id="species-tab" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">Species Analysis</h2>
+                <button class="export-btn" onclick="exportTableToExcel('speciesTable', 'species_analysis')">
+                    📥 Export to Excel
+                </button>
+                <table id="speciesTable" class="display" style="width:100%"></table>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Species Revenue Trends</h2>
+                <div class="chart-container">
+                    <canvas id="speciesTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Tab -->
+        <div id="monthly-tab" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">Monthly Analysis</h2>
+                <button class="export-btn" onclick="exportTableToExcel('monthlyTable', 'monthly_analysis')">
+                    📥 Export to Excel
+                </button>
+                <table id="monthlyTable" class="display" style="width:100%"></table>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Monthly Revenue Trend</h2>
+                <div class="chart-container">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Yearly Tab -->
+        <div id="yearly-tab" class="tab-content">
+            <div class="card">
+                <h2 class="card-title">Yearly Analysis</h2>
+                <button class="export-btn" onclick="exportTableToExcel('yearlyTable', 'yearly_analysis')">
+                    📥 Export to Excel
+                </button>
+                <table id="yearlyTable" class="display" style="width:100%"></table>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title">Yearly Revenue Trend</h2>
+                <div class="chart-container">
+                    <canvas id="yearlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analyticsData = {};
+        let charts = {};
+
+        // Load data
+        async function loadData() {
+            try {
+                const response = await fetch('elab_analytics_data.json');
+                analyticsData = await response.json();
+
+                // Update date range
+                document.getElementById('dateRange').textContent =
+                    `${analyticsData.meta.start_date} to ${analyticsData.meta.end_date}`;
+
+                // Initialize all views
+                initDashboard();
+                initDistrictTable();
+                initEmployeeTables();
+                initTestTable();
+                initSpeciesViews();
+                initMonthlyViews();
+                initYearlyViews();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Error loading analytics data. Please ensure elab_analytics_data.json exists.');
+            }
+        }
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Dashboard initialization
+        function initDashboard() {
+            const kpis = analyticsData.dashboard_kpis;
+            const kpiGrid = document.getElementById('kpiGrid');
+
+            const kpiMappings = [
+                { key: 'total_cases', label: 'Total Cases', icon: '📋', format: val => val.toLocaleString(), class: '' },
+                { key: 'total_revenue', label: 'Total Revenue', icon: '💰', format: val => '₹' + val.toFixed(2).toLocaleString(), class: 'revenue-value' },
+                { key: 'avg_revenue_per_case', label: 'Avg Revenue/Case', icon: '📊', format: val => '₹' + val.toFixed(2), class: '' },
+                { key: 'payment_completion_rate', label: 'Payment Rate', icon: '✓', format: val => val.toFixed(1) + '%', class: '' },
+                { key: 'sample_collection_rate', label: 'Sample Collection', icon: '🧪', format: val => val.toFixed(1) + '%', class: '' },
+                { key: 'report_sent_rate', label: 'Report Sent', icon: '📄', format: val => val.toFixed(1) + '%', class: '' },
+                { key: 'unique_customers', label: 'Unique Customers', icon: '👥', format: val => val.toLocaleString(), class: '' },
+                { key: 'total_employees', label: 'Total Employees', icon: '👨‍💼', format: val => val.toLocaleString(), class: '' }
+            ];
+
+            kpiGrid.innerHTML = kpiMappings.map(kpi => {
+                const value = kpis[kpi.key] || 0;
+                return `
+                    <div class="kpi-card">
+                        <div class="kpi-label">${kpi.icon} ${kpi.label}</div>
+                        <div class="kpi-value ${kpi.class}">${kpi.format(value)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Create charts
+            createTestsChart();
+            createSpeciesChart();
+            createEmployeeChart();
+            createDistrictRevenueChart();
+            createDashboardMonthlyChart();
+            createTestCategoryChart();
+        }
+
+        // Filter Dashboard
+        function filterDashboard(days) {
+            // This would require reloading data with filters
+            // For now, just show message
+            if (days !== 'all') {
+                alert(`Filtering for last ${days} days. To implement this, re-run the export script with option 2 and enter ${days} days.`);
+            }
+        }
+
+        // Chart: Top Tests
+        function createTestsChart() {
+            const tests = analyticsData.test_analysis.slice(0, 10);
+
+            if (tests.length === 0) {
+                document.querySelector('#testsChart').parentElement.innerHTML =
+                    '<div class="no-data">No test data available</div>';
+                return;
+            }
+
+            const ctx = document.getElementById('testsChart').getContext('2d');
+            charts.tests = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: tests.map(t => t.test_name || t.test_type),
+                    datasets: [{
+                        label: 'Test Count',
+                        data: tests.map(t => t.test_count),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart: Species Distribution
+        function createSpeciesChart() {
+            const species = analyticsData.species_analysis;
+
+            if (species.length === 0) {
+                document.querySelector('#speciesChart').parentElement.innerHTML =
+                    '<div class="no-data">No species data available</div>';
+                return;
+            }
+
+            const ctx = document.getElementById('speciesChart').getContext('2d');
+            const colors = [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(199, 199, 199, 0.8)',
+                'rgba(83, 102, 255, 0.8)'
+            ];
+
+            charts.species = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: species.map(s => s.species),
+                    datasets: [{
+                        data: species.map(s => s.total_cases),
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart: Employee Performance
+        function createEmployeeChart() {
+            const employees = analyticsData.employee_comparison;
+
+            if (employees.length === 0) {
+                document.querySelector('#employeeChart').parentElement.innerHTML =
+                    '<div class="no-data">No employee data available</div>';
+                return;
+            }
+
+            const ctx = document.getElementById('employeeChart').getContext('2d');
+            charts.employee = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: employees.map(e => e.employee_name),
+                    datasets: [
+                        {
+                            label: 'Total Cases',
+                            data: employees.map(e => e.total_cases),
+                            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Total Revenue',
+                            data: employees.map(e => e.total_revenue),
+                            backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                            borderColor: 'rgba(118, 75, 162, 1)',
+                            borderWidth: 2,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Cases'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Revenue (₹)'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart: District Revenue
+        function createDistrictRevenueChart() {
+            const districts = analyticsData.district_analysis.slice(0, 10);
+
+            if (districts.length === 0) {
+                document.querySelector('#districtRevenueChart').parentElement.innerHTML =
+                    '<div class="no-data">No district data available</div>';
+                return;
+            }
+
+            const ctx = document.getElementById('districtRevenueChart').getContext('2d');
+            charts.districtRevenue = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: districts.map(d => d.district),
+                    datasets: [{
+                        label: 'Revenue (₹)',
+                        data: districts.map(d => d.total_revenue),
+                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart: Dashboard Monthly Trend
+        function createDashboardMonthlyChart() {
+            const monthly = analyticsData.monthly_analysis;
+
+            if (!monthly || monthly.length === 0) {
+                document.querySelector('#dashboardMonthlyChart').parentElement.innerHTML =
+                    '<div class="no-data">No monthly data available</div>';
+                return;
+            }
+
+            const ctx = document.getElementById('dashboardMonthlyChart').getContext('2d');
+            charts.dashboardMonthly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: monthly.map(m => m.month),
+                    datasets: [{
+                        label: 'Revenue (₹)',
+                        data: monthly.map(m => m.total_revenue),
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart: Test Category Distribution
+        function createTestCategoryChart() {
+            const tests = analyticsData.test_analysis;
+
+            if (tests.length === 0) {
+                document.querySelector('#testCategoryChart').parentElement.innerHTML =
+                    '<div class="no-data">No test data available</div>';
+                return;
+            }
+
+            // Group by test type
+            const typeMap = {};
+            tests.forEach(t => {
+                const type = t.test_type || 'Unknown';
+                if (!typeMap[type]) {
+                    typeMap[type] = 0;
+                }
+                typeMap[type] += t.test_count;
+            });
+
+            const types = Object.keys(typeMap);
+            const counts = Object.values(typeMap);
+
+            const ctx = document.getElementById('testCategoryChart').getContext('2d');
+            const colors = [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)',
+                'rgba(199, 199, 199, 0.8)',
+                'rgba(83, 102, 255, 0.8)',
+                'rgba(255, 205, 86, 0.8)',
+                'rgba(201, 203, 207, 0.8)'
+            ];
+
+            charts.testCategory = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: types.slice(0, 15),
+                    datasets: [{
+                        label: 'Test Count',
+                        data: counts.slice(0, 15),
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize District Table
+        function initDistrictTable() {
+            const data = analyticsData.district_analysis;
+
+            if (data.length === 0) {
+                $('#districtTable').parent().append('<div class="no-data">No district data available</div>');
+                return;
+            }
+
+            $('#districtTable').DataTable({
+                data: data,
+                columns: [
+                    { data: 'district', title: 'District' },
+                    { data: 'state', title: 'State' },
+                    { data: 'total_cases', title: 'Total Cases' },
+                    { data: 'unique_owners', title: 'Unique Customers' },
+                    {
+                        data: 'total_revenue',
+                        title: 'Total Revenue',
+                        render: val => '₹' + (val || 0).toFixed(2)
+                    },
+                    {
+                        data: 'avg_revenue_per_visit',
+                        title: 'Avg Revenue/Visit',
+                        render: val => '₹' + (val || 0).toFixed(2)
+                    }
+                ],
+                pageLength: 25,
+                order: [[2, 'desc']]
+            });
+        }
+
+        // Initialize Employee Tables
+        function initEmployeeTables() {
+            const compData = analyticsData.employee_comparison;
+            const testData = analyticsData.employee_tests;
+
+            if (compData.length > 0) {
+                $('#employeeTable').DataTable({
+                    data: compData,
+                    columns: [
+                        { data: 'employee_name', title: 'Employee' },
+                        { data: 'total_cases', title: 'Total Cases' },
+                        {
+                            data: 'total_revenue',
+                            title: 'Total Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        },
+                        { data: 'payments_received', title: 'Payments Received' },
+                        { data: 'samples_collected', title: 'Samples Collected' },
+                        { data: 'reports_sent', title: 'Reports Sent' }
+                    ],
+                    pageLength: 25,
+                    order: [[1, 'desc']]
+                });
+            } else {
+                $('#employeeTable').parent().append('<div class="no-data">No employee comparison data available</div>');
+            }
+
+            if (testData.length > 0) {
+                $('#employeeTestTable').DataTable({
+                    data: testData,
+                    columns: [
+                        { data: 'employee_name', title: 'Employee' },
+                        { data: 'test_type', title: 'Test Type' },
+                        { data: 'test_name', title: 'Test Name' },
+                        { data: 'test_count', title: 'Count' },
+                        {
+                            data: 'revenue',
+                            title: 'Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        }
+                    ],
+                    pageLength: 25,
+                    order: [[3, 'desc']]
+                });
+            } else {
+                $('#employeeTestTable').parent().append('<div class="no-data">No employee test data available</div>');
+            }
+        }
+
+        // Initialize Test Table
+        function initTestTable() {
+            const data = analyticsData.test_analysis;
+
+            if (data.length === 0) {
+                $('#testTable').parent().append('<div class="no-data">No test data available</div>');
+                return;
+            }
+
+            $('#testTable').DataTable({
+                data: data,
+                columns: [
+                    { data: 'test_type', title: 'Test Type' },
+                    { data: 'test_name', title: 'Test Name' },
+                    { data: 'test_count', title: 'Count' },
+                    {
+                        data: 'total_revenue',
+                        title: 'Total Revenue',
+                        render: val => '₹' + (val || 0).toFixed(2)
+                    },
+                    {
+                        data: 'avg_price',
+                        title: 'Avg Price',
+                        render: val => '₹' + (val || 0).toFixed(2)
+                    },
+                    {
+                        data: 'first_test_date',
+                        title: 'First Test',
+                        render: val => val ? new Date(val).toLocaleDateString() : 'N/A'
+                    },
+                    {
+                        data: 'last_test_date',
+                        title: 'Last Test',
+                        render: val => val ? new Date(val).toLocaleDateString() : 'N/A'
+                    }
+                ],
+                pageLength: 25,
+                order: [[2, 'desc']]
+            });
+        }
+
+        // Initialize Species Views
+        function initSpeciesViews() {
+            const data = analyticsData.species_analysis;
+            const trends = analyticsData.species_trends;
+
+            if (data.length > 0) {
+                $('#speciesTable').DataTable({
+                    data: data,
+                    columns: [
+                        { data: 'species', title: 'Species' },
+                        { data: 'total_cases', title: 'Total Cases' },
+                        {
+                            data: 'total_revenue',
+                            title: 'Total Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        },
+                        {
+                            data: 'avg_revenue_per_case',
+                            title: 'Avg Revenue/Case',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        }
+                    ],
+                    pageLength: 25,
+                    order: [[1, 'desc']]
+                });
+            } else {
+                $('#speciesTable').parent().append('<div class="no-data">No species data available</div>');
+            }
+
+            // Species trends chart
+            if (trends.length > 0) {
+                createSpeciesTrendsChart(trends);
+            } else {
+                document.querySelector('#speciesTrendsChart').parentElement.innerHTML =
+                    '<div class="no-data">No species trends data available</div>';
+            }
+        }
+
+        // Chart: Species Trends
+        function createSpeciesTrendsChart(trends) {
+            const ctx = document.getElementById('speciesTrendsChart').getContext('2d');
+
+            // Group by species
+            const speciesMap = {};
+            trends.forEach(t => {
+                if (!speciesMap[t.species]) {
+                    speciesMap[t.species] = { months: [], revenues: [] };
+                }
+                speciesMap[t.species].months.push(t.year_month);
+                speciesMap[t.species].revenues.push(t.revenue);
+            });
+
+            const colors = [
+                'rgba(255, 99, 132, 0.8)',
+                'rgba(54, 162, 235, 0.8)',
+                'rgba(255, 206, 86, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)',
+                'rgba(255, 159, 64, 0.8)'
+            ];
+
+            const datasets = Object.keys(speciesMap).map((species, idx) => ({
+                label: species,
+                data: speciesMap[species].revenues,
+                borderColor: colors[idx % colors.length],
+                backgroundColor: colors[idx % colors.length].replace('0.8', '0.2'),
+                borderWidth: 2,
+                tension: 0.4
+            }));
+
+            // Get all unique months
+            const allMonths = [...new Set(trends.map(t => t.year_month))].sort();
+
+            charts.speciesTrends = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: allMonths,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Revenue (₹)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize Monthly Views
+        function initMonthlyViews() {
+            const data = analyticsData.monthly_analysis;
+
+            if (data && data.length > 0) {
+                $('#monthlyTable').DataTable({
+                    data: data,
+                    columns: [
+                        { data: 'month', title: 'Month' },
+                        { data: 'total_cases', title: 'Total Cases' },
+                        {
+                            data: 'total_revenue',
+                            title: 'Total Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        },
+                        {
+                            data: 'avg_revenue',
+                            title: 'Avg Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        },
+                        { data: 'unique_customers', title: 'Unique Customers' },
+                        { data: 'payments', title: 'Payments' },
+                        { data: 'samples_collected', title: 'Samples Collected' },
+                        { data: 'reports_sent', title: 'Reports Sent' }
+                    ],
+                    pageLength: 25,
+                    order: [[0, 'desc']]
+                });
+
+                // Create monthly chart
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                charts.monthly = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.month),
+                        datasets: [
+                            {
+                                label: 'Revenue',
+                                data: data.map(d => d.total_revenue),
+                                borderColor: 'rgba(102, 126, 234, 1)',
+                                backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                                borderWidth: 3,
+                                tension: 0.4,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Cases',
+                                data: data.map(d => d.total_cases),
+                                borderColor: 'rgba(118, 75, 162, 1)',
+                                backgroundColor: 'rgba(118, 75, 162, 0.2)',
+                                borderWidth: 3,
+                                tension: 0.4,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Revenue (₹)'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Cases'
+                                },
+                                grid: {
+                                    drawOnChartArea: false
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                $('#monthlyTable').parent().append('<div class="no-data">No monthly data available</div>');
+            }
+        }
+
+        // Initialize Yearly Views
+        function initYearlyViews() {
+            const data = analyticsData.yearly_analysis;
+
+            if (data && data.length > 0) {
+                $('#yearlyTable').DataTable({
+                    data: data,
+                    columns: [
+                        { data: 'year', title: 'Year' },
+                        { data: 'total_cases', title: 'Total Cases' },
+                        {
+                            data: 'total_revenue',
+                            title: 'Total Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        },
+                        {
+                            data: 'avg_revenue',
+                            title: 'Avg Revenue',
+                            render: val => '₹' + (val || 0).toFixed(2)
+                        },
+                        { data: 'unique_customers', title: 'Unique Customers' },
+                        { data: 'payments', title: 'Payments' },
+                        { data: 'samples_collected', title: 'Samples Collected' },
+                        { data: 'reports_sent', title: 'Reports Sent' }
+                    ],
+                    pageLength: 25,
+                    order: [[0, 'desc']]
+                });
+
+                // Create yearly chart
+                const ctx = document.getElementById('yearlyChart').getContext('2d');
+                charts.yearly = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.year.toString()),
+                        datasets: [
+                            {
+                                label: 'Revenue',
+                                data: data.map(d => d.total_revenue),
+                                backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                                borderColor: 'rgba(102, 126, 234, 1)',
+                                borderWidth: 2,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Cases',
+                                data: data.map(d => d.total_cases),
+                                backgroundColor: 'rgba(118, 75, 162, 0.8)',
+                                borderColor: 'rgba(118, 75, 162, 1)',
+                                borderWidth: 2,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Revenue (₹)'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Cases'
+                                },
+                                grid: {
+                                    drawOnChartArea: false
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                $('#yearlyTable').parent().append('<div class="no-data">No yearly data available</div>');
+            }
+        }
+
+        // Export table to Excel
+        function exportTableToExcel(tableId, filename) {
+            const table = document.getElementById(tableId);
+            let html = table.outerHTML;
+            const url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename + '.xls';
+            link.click();
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

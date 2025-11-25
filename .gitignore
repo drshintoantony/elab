@@ -1,0 +1,53 @@
+# Environment variables (KEEP .env.example)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Development scripts (keep for local use, but not needed for Vercel)
+check_data.py
+start_dashboard.sh
+
+# Documentation (use README_GITHUB.md instead)
+README.md
+QUICK_START.md
+FINAL_SUMMARY.md
