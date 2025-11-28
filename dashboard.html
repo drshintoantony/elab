@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eLAB Analytics Dashboard</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1600px; margin: 0 auto; }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1 { color: #333; margin-bottom: 10px; font-size: 2em; }
+        .subtitle { color: #666; font-size: 0.9em; }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+
+        .tab-content { display: none; animation: fadeIn 0.5s; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s;
+        }
+
+        .kpi-card:hover { transform: translateY(-5px); }
+
+        .kpi-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .kpi-label {
+            font-size: 0.85em;
+            text-transform: uppercase;
+            opacity: 0.9;
+            letter-spacing: 1px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        .filter-group select:focus, .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        table th:hover { background: rgba(255,255,255,0.1); }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        table tbody tr:hover { background: #f5f5f5; }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 30px 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>eLAB Analytics Dashboard</h1>
+            <p class="subtitle">Comprehensive Analytics - All Data Corrected & Verified</p>
+            <p class="subtitle" id="data-info">Loading data...</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">📊 Overview</button>
+            <button class="tab" onclick="showTab('employees')">👥 Employees</button>
+            <button class="tab" onclick="showTab('employee-monthly')">📅 Employee Monthly</button>
+            <button class="tab" onclick="showTab('tests')">🔬 Tests</button>
+            <button class="tab" onclick="showTab('test-employee')">👨‍⚕️ Test by Employee</button>
+            <button class="tab" onclick="showTab('districts')">🗺️ Districts</button>
+            <button class="tab" onclick="showTab('district-tests')">📍 District Tests</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview" class="tab-content active">
+            <div class="kpi-grid" id="kpi-container"></div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h3 class="card-title">Top 10 Employees by Cases</h3>
+                    <div class="chart-container">
+                        <canvas id="topEmployeesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">Top Districts by Cases</h3>
+                    <div class="chart-container">
+                        <canvas id="topDistrictsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employees Tab -->
+        <div id="employees" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">Employee Performance - All Time</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Search Employee</label>
+                        <input type="text" id="employeeSearch" placeholder="Type to filter...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Role</label>
+                        <select id="employeeRoleFilter">
+                            <option value="">All Roles</option>
+                        </select>
+                    </div>
+                </div>
+                <table id="employeesTable" class="display"></table>
+            </div>
+        </div>
+
+        <!-- Employee Monthly Tab -->
+        <div id="employee-monthly" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">Employee Monthly Performance</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Employee</label>
+                        <select id="employeeMonthlyFilter">
+                            <option value="">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Month</label>
+                        <select id="monthFilter">
+                            <option value="">All Months</option>
+                        </select>
+                    </div>
+                </div>
+                <table id="employeeMonthlyTable" class="display"></table>
+            </div>
+        </div>
+
+        <!-- Tests Tab -->
+        <div id="tests" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">Test Analysis - Monthly</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Search Test</label>
+                        <input type="text" id="testSearch" placeholder="Type to filter...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Month</label>
+                        <select id="testMonthFilter">
+                            <option value="">All Months</option>
+                        </select>
+                    </div>
+                </div>
+                <table id="testsMonthlyTable" class="display"></table>
+            </div>
+        </div>
+
+        <!-- Test by Employee Tab -->
+        <div id="test-employee" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">Tests Performed by Each Employee</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Employee</label>
+                        <select id="testEmployeeFilter">
+                            <option value="">All Employees</option>
+                        </select>
+                    </div>
+                </div>
+                <table id="testEmployeeTable" class="display"></table>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">Most Tests by Employee</h3>
+                <table id="employeeMostTestsTable" class="display"></table>
+            </div>
+        </div>
+
+        <!-- Districts Tab -->
+        <div id="districts" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">District Performance</h3>
+                <table id="districtsTable" class="display"></table>
+            </div>
+        </div>
+
+        <!-- District Tests Tab -->
+        <div id="district-tests" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">District-wise Test Analysis (Least to Most)</h3>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>District</label>
+                        <select id="districtTestFilter">
+                            <option value="">All Districts</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Search Test</label>
+                        <input type="text" id="districtTestSearch" placeholder="Type to filter...">
+                    </div>
+                </div>
+                <table id="districtTestsTable" class="display"></table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analyticsData = null;
+        let charts = {};
+
+        // Load data
+        fetch('elab_analytics_data.json')
+            .then(response => response.json())
+            .then(data => {
+                analyticsData = data;
+                initializeDashboard();
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('data-info').textContent = 'Error loading data!';
+            });
+
+        function initializeDashboard() {
+            document.getElementById('data-info').textContent =
+                `${analyticsData.dashboard_kpis.visits_with_employee} Visits | ` +
+                `${analyticsData.meta.total_tests} Tests | ` +
+                `${analyticsData.dashboard_kpis.unique_employees} Employees | ` +
+                `Last Updated: ${new Date(analyticsData.meta.export_date).toLocaleString()}`;
+
+            renderKPIs();
+            renderCharts();
+            initializeTables();
+            populateFilters();
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function renderKPIs() {
+            const kpis = analyticsData.dashboard_kpis;
+            const kpiContainer = document.getElementById('kpi-container');
+
+            const kpiData = [
+                { label: 'Total Visits', value: kpis.visits_with_employee.toLocaleString() },
+                { label: 'Total Tests', value: analyticsData.meta.total_tests.toLocaleString() },
+                { label: 'Unique Employees', value: kpis.unique_employees },
+                { label: 'Total Revenue', value: `₹${kpis.total_revenue.toLocaleString('en-IN', {maximumFractionDigits: 0})}` },
+                { label: 'Avg Revenue/Visit', value: `₹${kpis.avg_revenue.toLocaleString('en-IN', {maximumFractionDigits: 0})}` },
+                { label: 'Tests/Visit Ratio', value: (analyticsData.meta.total_tests / kpis.visits_with_employee).toFixed(1) }
+            ];
+
+            kpiContainer.innerHTML = kpiData.map(kpi => `
+                <div class="kpi-card">
+                    <div class="kpi-label">${kpi.label}</div>
+                    <div class="kpi-value">${kpi.value}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderCharts() {
+            // Top Employees Chart
+            const topEmployees = analyticsData.employee_totals.slice(0, 10);
+            if (charts.topEmployees) charts.topEmployees.destroy();
+            charts.topEmployees = new Chart(document.getElementById('topEmployeesChart'), {
+                type: 'bar',
+                data: {
+                    labels: topEmployees.map(e => e.employee_name),
+                    datasets: [{
+                        label: 'Cases',
+                        data: topEmployees.map(e => e.total_cases),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Top Districts Chart
+            const topDistricts = analyticsData.district_analysis.slice(0, 10);
+            if (charts.topDistricts) charts.topDistricts.destroy();
+            charts.topDistricts = new Chart(document.getElementById('topDistrictsChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: topDistricts.map(d => d.district),
+                    datasets: [{
+                        data: topDistricts.map(d => d.total_cases),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                            '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+                            '#a8edea', '#fed6e3'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        function initializeTables() {
+            // Employees Table
+            $('#employeesTable').DataTable({
+                data: analyticsData.employee_totals,
+                columns: [
+                    { data: 'employee_name', title: 'Employee Name' },
+                    { data: 'employee_role', title: 'Role' },
+                    { data: 'total_cases', title: 'Total Cases' },
+                    {
+                        data: 'total_revenue',
+                        title: 'Total Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    }
+                ],
+                order: [[2, 'desc']],
+                pageLength: 25
+            });
+
+            // Employee Monthly Table
+            $('#employeeMonthlyTable').DataTable({
+                data: analyticsData.employee_monthly,
+                columns: [
+                    { data: 'employee_name', title: 'Employee' },
+                    { data: 'month_name', title: 'Month' },
+                    { data: 'total_cases', title: 'Cases' },
+                    {
+                        data: 'total_revenue',
+                        title: 'Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    },
+                    { data: 'payments', title: 'Payments' },
+                    { data: 'samples', title: 'Samples' },
+                    { data: 'reports', title: 'Reports' }
+                ],
+                order: [[1, 'desc'], [2, 'desc']],
+                pageLength: 25
+            });
+
+            // Tests Monthly Table
+            $('#testsMonthlyTable').DataTable({
+                data: analyticsData.test_analyses.test_monthly,
+                columns: [
+                    { data: 'month_name', title: 'Month' },
+                    { data: 'test_type', title: 'Test Type' },
+                    { data: 'test_name', title: 'Test Name' },
+                    { data: 'test_count', title: 'Count' },
+                    {
+                        data: 'total_revenue',
+                        title: 'Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    },
+                    {
+                        data: 'avg_price',
+                        title: 'Avg Price',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    }
+                ],
+                order: [[0, 'desc'], [3, 'desc']],
+                pageLength: 25
+            });
+
+            // Test Employee Table
+            $('#testEmployeeTable').DataTable({
+                data: analyticsData.test_analyses.test_employee_detail,
+                columns: [
+                    { data: 'employee_name', title: 'Employee' },
+                    { data: 'test_type', title: 'Test Type' },
+                    { data: 'test_name', title: 'Test Name' },
+                    { data: 'test_count', title: 'Count' },
+                    {
+                        data: 'revenue',
+                        title: 'Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    }
+                ],
+                order: [[0, 'asc'], [3, 'desc']],
+                pageLength: 25
+            });
+
+            // Employee Most Tests Table
+            $('#employeeMostTestsTable').DataTable({
+                data: analyticsData.test_analyses.employee_most_tests,
+                columns: [
+                    { data: 'employee_name', title: 'Employee' },
+                    { data: 'total_tests_performed', title: 'Total Tests' },
+                    {
+                        data: 'test_revenue',
+                        title: 'Test Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    },
+                    { data: 'most_common_test_name', title: 'Most Common Test' },
+                    { data: 'most_common_test_count', title: 'Count' }
+                ],
+                order: [[1, 'desc']],
+                pageLength: 25
+            });
+
+            // Districts Table
+            $('#districtsTable').DataTable({
+                data: analyticsData.district_analysis,
+                columns: [
+                    { data: 'district', title: 'District' },
+                    { data: 'state', title: 'State' },
+                    { data: 'total_cases', title: 'Total Cases' },
+                    { data: 'unique_owners', title: 'Unique Customers' },
+                    {
+                        data: 'total_revenue',
+                        title: 'Total Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    },
+                    {
+                        data: 'avg_revenue',
+                        title: 'Avg Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    }
+                ],
+                order: [[2, 'desc']],
+                pageLength: 25
+            });
+
+            // District Tests Table
+            $('#districtTestsTable').DataTable({
+                data: analyticsData.test_analyses.district_tests,
+                columns: [
+                    { data: 'district', title: 'District' },
+                    { data: 'test_type', title: 'Test Type' },
+                    { data: 'test_name', title: 'Test Name' },
+                    { data: 'test_count', title: 'Count' },
+                    {
+                        data: 'revenue',
+                        title: 'Revenue',
+                        render: data => `₹${data.toLocaleString('en-IN', {maximumFractionDigits: 0})}`
+                    }
+                ],
+                order: [[0, 'asc'], [3, 'asc']], // Least to most per district
+                pageLength: 25
+            });
+        }
+
+        function populateFilters() {
+            // Populate employee role filter
+            const roles = [...new Set(analyticsData.employee_totals.map(e => e.employee_role))];
+            const roleFilter = document.getElementById('employeeRoleFilter');
+            roles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                option.textContent = role;
+                roleFilter.appendChild(option);
+            });
+
+            // Populate employee filters
+            const employees = [...new Set(analyticsData.employee_totals.map(e => e.employee_name))].sort();
+            ['employeeMonthlyFilter', 'testEmployeeFilter'].forEach(filterId => {
+                const filter = document.getElementById(filterId);
+                employees.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp;
+                    option.textContent = emp;
+                    filter.appendChild(option);
+                });
+            });
+
+            // Populate month filters
+            const months = [...new Set(analyticsData.employee_monthly.map(e => e.year_month))].sort().reverse();
+            ['monthFilter', 'testMonthFilter'].forEach(filterId => {
+                const filter = document.getElementById(filterId);
+                months.forEach(month => {
+                    const option = document.createElement('option');
+                    option.value = month;
+                    option.textContent = month;
+                    filter.appendChild(option);
+                });
+            });
+
+            // Populate district filter
+            const districts = [...new Set(analyticsData.district_analysis.map(d => d.district))].sort();
+            const districtFilter = document.getElementById('districtTestFilter');
+            districts.forEach(dist => {
+                const option = document.createElement('option');
+                option.value = dist;
+                option.textContent = dist;
+                districtFilter.appendChild(option);
+            });
+
+            // Add filter event listeners
+            document.getElementById('employeeMonthlyFilter').addEventListener('change', applyFilters);
+            document.getElementById('monthFilter').addEventListener('change', applyFilters);
+            document.getElementById('testEmployeeFilter').addEventListener('change', applyFilters);
+            document.getElementById('districtTestFilter').addEventListener('change', applyFilters);
+        }
+
+        function applyFilters() {
+            // Apply DataTables search filters
+            const empMonthlyTable = $('#employeeMonthlyTable').DataTable();
+            const empFilter = document.getElementById('employeeMonthlyFilter').value;
+            const monthFilter = document.getElementById('monthFilter').value;
+
+            if (empFilter) {
+                empMonthlyTable.column(0).search(empFilter).draw();
+            } else {
+                empMonthlyTable.column(0).search('').draw();
+            }
+
+            if (monthFilter) {
+                empMonthlyTable.column(1).search(monthFilter).draw();
+            } else {
+                empMonthlyTable.column(1).search('').draw();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,21 +1,16 @@
 {
   "version": 2,
-  "public": true,
-  "redirects": [
+  "name": "elab-analytics",
+  "builds": [
     {
-      "source": "/",
-      "destination": "/elab_analytics_dashboard.html"
+      "src": "index.html",
+      "use": "@vercel/static"
     }
   ],
-  "headers": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600"
-        }
-      ]
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
